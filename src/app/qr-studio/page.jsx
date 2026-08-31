@@ -303,7 +303,7 @@ function QRStudioContent() {
             }}>
               <QRCodeSVG
                 value={qrUrl}
-                size={200}
+                size={175}
                 level="H"
                 includeMargin={false}
                 imageSettings={{

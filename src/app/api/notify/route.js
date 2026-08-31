@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { getClientIp, checkRateLimit, inspectPayload, sendSecurityIncidentAlert } from '../../../lib/securityGuard';
 
 export const runtime = 'nodejs';
 
@@ -14,8 +15,56 @@ function escapeHtml(str) {
 }
 
 export async function POST(request) {
+  const clientIp = getClientIp(request);
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const defaultAdmin = process.env.ADMIN_EMAIL || 'info@dorek.in';
+
   try {
+    // 1. Rate-Limit Check (Max 15 requests per minute per IP)
+    const rateCheck = checkRateLimit(clientIp, 15, 60000);
+    if (rateCheck.exceeded) {
+      console.warn(`Rate limit exceeded on notify API for IP ${clientIp}`);
+      sendSecurityIncidentAlert({
+        clientIp,
+        endpoint: '/api/notify',
+        threatType: 'DDoS / Rapid Notification Flooding',
+        sample: `Request count: ${rateCheck.count} in 60s`,
+        smtpUser,
+        smtpPass,
+        adminEmail: defaultAdmin
+      }).catch(e => console.error('Alert error:', e));
+
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please wait a moment.' }, 
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
+
+    // 2. Deep Threat Inspection (XSS, SQLi, NoSQLi, RCE, Path Traversal)
+    const threatAnalysis = inspectPayload(body);
+    if (threatAnalysis.isThreat) {
+      console.warn(`🚨 Security threat detected on Dorek Pulse from IP ${clientIp}: ${threatAnalysis.type}`);
+      
+      // Dispatch immediate warning email to admin
+      sendSecurityIncidentAlert({
+        clientIp,
+        endpoint: '/api/notify',
+        threatType: threatAnalysis.type,
+        sample: threatAnalysis.sample,
+        smtpUser,
+        smtpPass,
+        adminEmail: defaultAdmin
+      }).catch(e => console.error('Alert error:', e));
+
+      return NextResponse.json(
+        { error: 'Security violation: Request blocked by Dorek Cyber Defense System.' }, 
+        { status: 403 }
+      );
+    }
+
     const { 
       type, 
       outlet, 
@@ -29,10 +78,10 @@ export async function POST(request) {
       notificationEmails
     } = body;
 
-    // Securely retrieve credentials ONLY from Server Environment Variables
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const defaultAdmin = process.env.ADMIN_EMAIL || 'info@dorek.in';
+    // Strict input length validation
+    if ((customerName && customerName.length > 80) || (customerPhone && customerPhone.length > 25) || (message && message.length > 1000)) {
+      return NextResponse.json({ error: 'Payload exceeds character limits.' }, { status: 400 });
+    }
 
     if (!smtpUser || !smtpPass) {
       console.warn('SMTP credentials not configured on server. Skipping email dispatch.');
@@ -42,7 +91,7 @@ export async function POST(request) {
       }, { status: 200 });
     }
 
-    // Build unique recipient list
+    // Build unique recipient list securely
     let recipients = [];
     if (notificationEmails && Array.isArray(notificationEmails) && notificationEmails.length > 0) {
       recipients = notificationEmails.map(e => String(e).trim()).filter(e => e && e.includes('@'));

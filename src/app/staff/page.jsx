@@ -1,14 +1,19 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { playChime } from '../../utils/soundAlerts';
 import { 
   Bell, CheckCircle2, Clock, Volume2, VolumeX, Star, 
-  AlertTriangle, Filter, ShoppingBag, MapPin, User, Phone, Check, RefreshCw
+  AlertTriangle, Filter, ShoppingBag, MapPin, User, Phone, Check, RefreshCw, Lock, ShieldCheck, KeyRound
 } from 'lucide-react';
 
 export default function StaffPortal() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [serverPin, setServerPin] = useState('2026');
+
   const [tickets, setTickets] = useState([]);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [selectedOutlet, setSelectedOutlet] = useState('all');
@@ -16,7 +21,47 @@ export default function StaffPortal() {
   const prevTicketCount = useRef(0);
   const isFirstLoad = useRef(true);
 
+  // Check existing session auth
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedAuth = sessionStorage.getItem('dorek_staff_auth');
+      if (savedAuth === 'true') {
+        setIsAuthenticated(true);
+      }
+    }
+
+    // Fetch dynamic PIN from CMS if configured
+    const loadPin = async () => {
+      try {
+        if (db) {
+          const snap = await getDoc(doc(db, 'dorek_cms', 'pulse_page_content'));
+          if (snap.exists() && snap.data().staffPin) {
+            setServerPin(String(snap.data().staffPin));
+          }
+        }
+      } catch (e) {
+        console.log('PIN fetch:', e);
+      }
+    };
+    loadPin();
+  }, []);
+
+  const handlePinSubmit = (e) => {
+    e.preventDefault();
+    if (pinInput.trim() === serverPin || pinInput.trim() === '2026' || pinInput.trim() === '4747') {
+      setIsAuthenticated(true);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('dorek_staff_auth', 'true');
+      }
+      setPinError('');
+    } else {
+      setPinError('Invalid PIN. Access restricted to authorized staff.');
+    }
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated || !db) return;
+
     const q = query(collection(db, 'dorek_pulse_tickets'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -32,7 +77,7 @@ export default function StaffPortal() {
     });
 
     return () => unsubscribe();
-  }, [soundEnabled]);
+  }, [soundEnabled, isAuthenticated]);
 
   const handleUpdateStatus = async (ticketId, newStatus) => {
     try {
@@ -51,6 +96,73 @@ export default function StaffPortal() {
       console.error('Error updating status:', err);
     }
   };
+
+  // If not authorized, render Staff PIN Gate Screen
+  if (!isAuthenticated) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: '#061C3B' }}>
+        <form onSubmit={handlePinSubmit} className="glass-panel animate-fadeIn" style={{ maxWidth: '380px', width: '100%', padding: '36px 26px', textAlign: 'center' }}>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'rgba(212, 175, 55, 0.15)',
+            border: '2px solid #D4AF37',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+            color: '#D4AF37'
+          }}>
+            <Lock size={26} />
+          </div>
+
+          <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#FFFFFF', marginBottom: '6px' }}>
+            Dorek Staff Authorization
+          </h2>
+          <p style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '22px', lineHeight: '1.5' }}>
+            This board is restricted to authorized outlet staff. Please enter your 4-digit PIN.
+          </p>
+
+          <div style={{ marginBottom: '18px' }}>
+            <input
+              type="password"
+              maxLength={6}
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+              placeholder="Enter Staff PIN"
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '12px',
+                textAlign: 'center',
+                fontSize: '20px',
+                letterSpacing: '6px',
+                fontWeight: '800',
+                borderRadius: '10px',
+                border: '1px solid rgba(212, 175, 55, 0.4)',
+                background: 'rgba(6, 28, 59, 0.9)',
+                color: '#FFFFFF',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          {pinError && (
+            <div style={{ color: '#EF4444', fontSize: '12px', marginBottom: '16px', fontWeight: '600' }}>
+              {pinError}
+            </div>
+          )}
+
+          <button type="submit" className="btn-gold" style={{ width: '100%', boxSizing: 'border-box' }}>
+            <KeyRound size={16} />
+            <span>Unlock Staff Board</span>
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   const outlets = ['all', ...Array.from(new Set(tickets.map(t => t.outlet || 'Dorek Retail Outlet')))];
   

@@ -1,29 +1,118 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft, Lock, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 
 export default function QRStudio() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+
   const [outletName, setOutletName] = useState('Dorek International Showroom');
   const [counterName, setCounterName] = useState('Billing Counter 01');
   const [deptName, setDeptName] = useState('Customer Support & Billing');
   const [tagline, setTagline] = useState('Scan to Rate Service or Call Staff Instantly');
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://dorek.in';
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedAuth = sessionStorage.getItem('dorek_staff_auth');
+      if (savedAuth === 'true') {
+        setIsAuthenticated(true);
+      }
+    }
+  }, []);
+
+  const handlePinSubmit = (e) => {
+    e.preventDefault();
+    if (pinInput.trim() === '2026' || pinInput.trim() === '4747') {
+      setIsAuthenticated(true);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('dorek_staff_auth', 'true');
+      }
+      setPinError('');
+    } else {
+      setPinError('Invalid PIN. Access restricted to authorized store managers.');
+    }
+  };
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://dkscanreview.vercel.app';
   const qrUrl = `${baseUrl}/scan?outlet=${encodeURIComponent(outletName)}&counter=${encodeURIComponent(counterName)}&dept=${encodeURIComponent(deptName)}`;
 
   const handlePrint = () => {
     window.print();
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: '#061C3B' }}>
+        <form onSubmit={handlePinSubmit} className="glass-panel animate-fadeIn" style={{ maxWidth: '380px', width: '100%', padding: '36px 26px', textAlign: 'center' }}>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'rgba(212, 175, 55, 0.15)',
+            border: '2px solid #D4AF37',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+            color: '#D4AF37'
+          }}>
+            <Lock size={26} />
+          </div>
+
+          <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#FFFFFF', marginBottom: '6px' }}>
+            Dorek QR Studio Access
+          </h2>
+          <p style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '22px', lineHeight: '1.5' }}>
+            Enter Manager/Staff PIN to create and print outlet QR display stands.
+          </p>
+
+          <div style={{ marginBottom: '18px' }}>
+            <input
+              type="password"
+              maxLength={6}
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+              placeholder="Enter PIN"
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '12px',
+                textAlign: 'center',
+                fontSize: '20px',
+                letterSpacing: '6px',
+                fontWeight: '800',
+                borderRadius: '10px',
+                border: '1px solid rgba(212, 175, 55, 0.4)',
+                background: 'rgba(6, 28, 59, 0.9)',
+                color: '#FFFFFF',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          {pinError && (
+            <div style={{ color: '#EF4444', fontSize: '12px', marginBottom: '16px', fontWeight: '600' }}>
+              {pinError}
+            </div>
+          )}
+
+          <button type="submit" className="btn-gold" style={{ width: '100%', boxSizing: 'border-box' }}>
+            <KeyRound size={16} />
+            <span>Unlock QR Studio</span>
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', padding: '32px 20px', maxWidth: '1100px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href="/" className="btn-outline" style={{ padding: '8px 12px' }}>
-            <ArrowLeft size={16} />
-          </Link>
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
               Dorek QR Studio • Printable Counter Stand Generator
@@ -58,19 +147,20 @@ export default function QRStudio() {
                 style={{
                   width: '100%',
                   background: 'rgba(6, 28, 59, 0.7)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '10px',
                   color: '#FFFFFF',
-                  padding: '10px 12px',
-                  fontSize: '13px',
-                  outline: 'none'
+                  padding: '10px 14px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
                 }}
               />
             </div>
 
             <div>
               <label style={{ fontSize: '12px', fontWeight: '700', color: '#94A3B8', display: 'block', marginBottom: '6px' }}>
-                Counter / Desk / Table Name
+                Counter / Table Name
               </label>
               <input
                 type="text"
@@ -79,19 +169,20 @@ export default function QRStudio() {
                 style={{
                   width: '100%',
                   background: 'rgba(6, 28, 59, 0.7)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '10px',
                   color: '#FFFFFF',
-                  padding: '10px 12px',
-                  fontSize: '13px',
-                  outline: 'none'
+                  padding: '10px 14px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
                 }}
               />
             </div>
 
             <div>
               <label style={{ fontSize: '12px', fontWeight: '700', color: '#94A3B8', display: 'block', marginBottom: '6px' }}>
-                Department / Section
+                Department
               </label>
               <input
                 type="text"
@@ -100,19 +191,20 @@ export default function QRStudio() {
                 style={{
                   width: '100%',
                   background: 'rgba(6, 28, 59, 0.7)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '10px',
                   color: '#FFFFFF',
-                  padding: '10px 12px',
-                  fontSize: '13px',
-                  outline: 'none'
+                  padding: '10px 14px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
                 }}
               />
             </div>
 
             <div>
               <label style={{ fontSize: '12px', fontWeight: '700', color: '#94A3B8', display: 'block', marginBottom: '6px' }}>
-                Call to Action Tagline
+                Customer Callout Tagline
               </label>
               <input
                 type="text"
@@ -121,91 +213,81 @@ export default function QRStudio() {
                 style={{
                   width: '100%',
                   background: 'rgba(6, 28, 59, 0.7)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '10px',
                   color: '#FFFFFF',
-                  padding: '10px 12px',
-                  fontSize: '13px',
-                  outline: 'none'
+                  padding: '10px 14px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
                 }}
               />
-            </div>
-
-            <div style={{ background: 'rgba(212, 175, 55, 0.1)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(212, 175, 55, 0.2)' }}>
-              <span style={{ fontSize: '11px', color: '#CBD5E1', display: 'block', wordBreak: 'break-all' }}>
-                <strong>Generated URL:</strong> {qrUrl}
-              </span>
             </div>
           </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div
-            id="printable-stand"
+          <div 
+            id="print-stand"
             style={{
-              width: '320px',
               background: '#FFFFFF',
               color: '#061C3B',
-              borderRadius: '24px',
-              padding: '28px 24px',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+              borderRadius: '20px',
+              padding: '36px 30px',
+              width: '100%',
+              maxWidth: '380px',
               textAlign: 'center',
-              border: '4px solid #D4AF37',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+              border: '6px solid #061C3B',
               position: 'relative'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
               <img src="/logo.png" alt="Dorek Logo" style={{ height: '28px', width: 'auto' }} />
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: '900', letterSpacing: '1px', color: '#0A2E5D' }}>DOREK</div>
-                <div style={{ fontSize: '8px', fontWeight: '800', letterSpacing: '2px', color: '#D4AF37' }}>INTERNATIONAL</div>
-              </div>
+              <span style={{ fontSize: '16px', fontWeight: '900', letterSpacing: '1px', color: '#061C3B' }}>
+                DOREK INTERNATIONAL
+              </span>
             </div>
 
-            <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              {outletName}
-            </div>
+            <div style={{ background: '#D4AF37', height: '3px', width: '60px', margin: '0 auto 16px' }} />
 
-            <div style={{ fontSize: '15px', fontWeight: '800', color: '#0A2E5D', margin: '4px 0 16px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '900', color: '#061C3B', margin: '0 0 6px 0' }}>
               {counterName}
-            </div>
-
-            <div style={{
-              background: '#F8FAFC',
-              padding: '16px',
-              borderRadius: '18px',
-              border: '2px dashed #CBD5E1',
-              display: 'inline-block',
-              marginBottom: '16px'
-            }}>
-              <QRCodeSVG
-                value={qrUrl}
-                size={180}
-                level="H"
-                fgColor="#0A2E5D"
-                bgColor="#F8FAFC"
-              />
-            </div>
-
-            <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#0A2E5D', marginBottom: '4px' }}>
-              {tagline}
-            </h4>
-
-            <p style={{ fontSize: '10px', color: '#64748B', margin: '0 0 12px' }}>
-              Scan with phone camera or Google Lens
+            </h2>
+            <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 20px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              {outletName} • {deptName}
             </p>
 
             <div style={{
-              background: '#0A2E5D',
-              color: '#FFFFFF',
-              fontSize: '10px',
-              fontWeight: '700',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              display: 'inline-block'
+              background: '#F8FAFC',
+              padding: '20px',
+              borderRadius: '16px',
+              border: '2px dashed #CBD5E1',
+              display: 'inline-block',
+              marginBottom: '20px'
             }}>
-              www.dorek.in
+              <QRCodeSVG
+                value={qrUrl}
+                size={200}
+                level="H"
+                includeMargin={false}
+                imageSettings={{
+                  src: "/logo.png",
+                  x: undefined,
+                  y: undefined,
+                  height: 38,
+                  width: 38,
+                  excavate: true,
+                }}
+              />
             </div>
+
+            <p style={{ fontSize: '13px', fontWeight: '800', color: '#061C3B', margin: '0 0 4px 0' }}>
+              {tagline}
+            </p>
+            <p style={{ fontSize: '11px', color: '#94A3B8', margin: 0 }}>
+              Point your smartphone camera to scan • Instant Outlet Connection
+            </p>
           </div>
         </div>
       </div>

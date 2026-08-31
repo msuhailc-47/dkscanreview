@@ -122,3 +122,54 @@ h1, h2, h3, h4, h5, h6 {
 .anim-pulse {
   animation: pulseGlow 2s infinite ease-in-out;
 }
+
+
+/* ========================================================
+   PRINT STYLES: ONLY PRINT THE STAND CARD (#print-stand)
+   ======================================================== */
+@media print {
+  body {
+    background: #FFFFFF !important;
+    background-image: none !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .no-print, 
+  .no-print * {
+    display: none !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #print-stand, 
+  #print-stand * {
+    visibility: visible !important;
+  }
+
+  #print-stand {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 380px !important;
+    max-width: 100% !important;
+    border: 5px solid #061C3B !important;
+    border-radius: 20px !important;
+    padding: 36px 30px !important;
+    background: #FFFFFF !important;
+    color: #061C3B !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 10mm;
+  }
+}

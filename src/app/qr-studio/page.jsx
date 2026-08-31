@@ -148,7 +148,7 @@ function QRStudioContent() {
 
   return (
     <div style={{ minHeight: '100vh', padding: '32px 20px', maxWidth: '1100px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '14px' }}>
+      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '14px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
             Dorek QR Studio • Printable Counter Stand Generator
@@ -165,7 +165,7 @@ function QRStudioContent() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '28px' }}>
-        <div className="glass-panel" style={{ padding: '24px' }}>
+        <div className="glass-panel no-print" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#D4AF37', marginBottom: '18px' }}>
             Customize Stand Details
           </h3>

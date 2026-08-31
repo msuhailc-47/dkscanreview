@@ -29,22 +29,21 @@ export async function POST(request) {
       notificationEmails
     } = body;
 
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
+    // Use environment variables or reliable Dorek SMTP fallback
+    const smtpUser = process.env.SMTP_USER || body.smtpUser || 'msuhailc47@gmail.com';
+    const smtpPass = process.env.SMTP_PASS || body.smtpPass || 'nelm wiih eyvo tsrh';
     const defaultAdmin = process.env.ADMIN_EMAIL || 'info@dorek.in';
 
     // Build recipient list
-    let recipients = [defaultAdmin];
+    let recipients = [];
     if (notificationEmails && Array.isArray(notificationEmails) && notificationEmails.length > 0) {
-      recipients = [...new Set([...recipients, ...notificationEmails.map(e => e.trim()).filter(Boolean)])];
+      recipients = notificationEmails.map(e => e.trim()).filter(e => e && e.includes('@'));
     } else if (typeof notificationEmails === 'string' && notificationEmails.trim()) {
-      const extra = notificationEmails.split(',').map(e => e.trim()).filter(Boolean);
-      recipients = [...new Set([...recipients, ...extra])];
+      recipients = notificationEmails.split(',').map(e => e.trim()).filter(e => e && e.includes('@'));
     }
-
-    if (!smtpUser || !smtpPass) {
-      console.warn('SMTP credentials not configured in environment variables');
-      return NextResponse.json({ success: true, warning: 'SMTP not configured, skipped email dispatch' });
+    
+    if (recipients.length === 0) {
+      recipients = [defaultAdmin, 'msuhailc47@gmail.com'];
     }
 
     const transporter = nodemailer.createTransport({

@@ -1,114 +1,136 @@
 'use client';
 import { useEffect } from 'react';
-import { CheckCircle2, Globe, MessageCircle, ArrowRight, Sparkles, RefreshCw } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { CheckCircle2, ArrowRight, MessageCircle, RotateCcw, Heart, Star, Sparkles } from 'lucide-react';
 
-export default function ThankYouScreen({ type, onReset, outlet, counter }) {
+export default function ThankYouScreen({ type, outlet, counter, pageContent = {}, onReset }) {
   useEffect(() => {
     try {
       confetti({
         particleCount: 80,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#D4AF37', '#0A2E5D', '#ffffff', '#F3D372']
+        colors: ['#D4AF37', '#0A2E5D', '#38BDF8', '#F59E0B']
       });
-    } catch (e) {}
+    } catch (e) {
+      console.log('Confetti trigger:', e);
+    }
   }, []);
 
+  const isReview = type === 'review';
+  const websiteUrl = pageContent.websiteUrl || 'https://dorek.in';
+  const websiteBtnText = pageContent.websiteBtnText || 'Visit Dorek International (dorek.in) →';
+  const whatsappUrl = pageContent.whatsappUrl || 'https://wa.me/919747522000';
+  const whatsappBtnText = pageContent.whatsappBtnText || '💬 Chat with Outlet Support (+91 97475 22000)';
+
   return (
-    <div className="glass-panel animate-fadeIn" style={{ padding: '36px 24px', textAlign: 'center', maxWidth: '480px', margin: '0 auto' }}>
+    <div className="glass-panel animate-fadeIn" style={{ padding: '36px 24px', textAlign: 'center', maxWidth: '440px', margin: '0 auto' }}>
       <div style={{
-        width: '72px',
-        height: '72px',
+        width: '64px',
+        height: '64px',
         borderRadius: '50%',
-        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(212, 175, 55, 0.3) 100%)',
-        border: '2px solid #10B981',
+        background: 'rgba(212, 175, 55, 0.15)',
+        border: '2px solid #D4AF37',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        margin: '0 auto 20px',
-        color: '#10B981'
+        margin: '0 auto 16px',
+        color: '#D4AF37'
       }}>
-        <CheckCircle2 size={40} />
+        {isReview ? <Star size={32} fill="#D4AF37" /> : <Sparkles size={32} />}
       </div>
 
-      <span className="gold-badge" style={{ marginBottom: '12px' }}>
-        <Sparkles size={14} /> {type === 'service_call' ? 'Staff Notified Instantly' : 'Review Received'}
-      </span>
-
-      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '8px', color: '#FFFFFF' }}>
-        {type === 'service_call' ? 'Help is on the way!' : 'Thank You For Your Feedback!'}
+      <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#FFFFFF', marginBottom: '8px' }}>
+        {isReview 
+          ? (pageContent.thankYouReviewTitle || 'Thank You for Your Feedback!') 
+          : (pageContent.thankYouServiceTitle || 'Staff Alerted Successfully!')}
       </h2>
 
-      <p style={{ color: '#94A3B8', fontSize: '14px', lineHeight: '1.6', marginBottom: '24px' }}>
-        {type === 'service_call' 
-          ? `Our team at ${counter || 'your counter'} has received your request and is attending to you right now.`
-          : 'Your review helps Dorek International maintain world-class quality and premium customer service across Kerala.'
-        }
+      <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: '1.6', marginBottom: '28px' }}>
+        {isReview 
+          ? (pageContent.thankYouReviewMessage || 'Your feedback helps us provide the best engineering and retail experience across all our outlets.') 
+          : (pageContent.thankYouServiceMessage || `Our counter supervisor is on their way to assist you at ${counter}.`)}
       </p>
 
-      {/* Cross-Promotion & Website Invitation Card */}
+      {/* Cross-Promotion Card */}
       <div style={{
-        background: 'rgba(10, 46, 93, 0.6)',
+        background: 'linear-gradient(135deg, rgba(10,46,93,0.8) 0%, rgba(22,66,125,0.8) 100%)',
         border: '1px solid rgba(212, 175, 55, 0.3)',
         borderRadius: '16px',
-        padding: '20px',
+        padding: '20px 16px',
         marginBottom: '24px',
-        textAlign: 'left'
+        textAlign: 'center'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-          <Globe size={20} style={{ color: '#D4AF37' }} />
-          <h4 style={{ color: '#FFFFFF', fontSize: '16px', fontWeight: '700', margin: 0 }}>
-            Discover Dorek International
-          </h4>
+        <div style={{ fontSize: '11px', fontWeight: '800', color: '#D4AF37', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '4px' }}>
+          Explore Our Engineering & Products
         </div>
-        <p style={{ color: '#CBD5E1', fontSize: '13px', lineHeight: '1.5', marginBottom: '16px' }}>
-          Explore our complete range of engineering solutions, retail products, franchise opportunities, and business divisions online.
-        </p>
+        <h4 style={{ fontSize: '16px', fontWeight: '700', color: '#FFFFFF', margin: '0 0 14px 0' }}>
+          Discover Dorek International Online
+        </h4>
 
-        <a 
-          href="https://dorek.in" 
-          target="_blank" 
+        <a
+          href={websiteUrl}
+          target="_blank"
           rel="noopener noreferrer"
-          className="btn-gold"
-          style={{ width: '100%', textDecoration: 'none', boxSizing: 'border-box' }}
-        >
-          <span>Visit Official Website (dorek.in)</span>
-          <ArrowRight size={16} />
-        </a>
-      </div>
-
-      {/* Secondary Actions */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <a 
-          href="https://wa.me/919876543210?text=Hi%20Dorek%2C%20I%20am%20at%20your%20outlet%20and%20need%20assistance" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="btn-outline"
-          style={{ width: '100%', color: '#25D366', borderColor: 'rgba(37, 211, 102, 0.3)' }}
-        >
-          <MessageCircle size={18} />
-          <span>Chat on WhatsApp</span>
-        </a>
-
-        <button 
-          onClick={onReset}
           style={{
-            background: 'none',
-            border: 'none',
-            color: '#94A3B8',
-            fontSize: '13px',
-            cursor: 'pointer',
-            padding: '8px',
-            display: 'inline-flex',
+            display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px'
+            gap: '8px',
+            background: '#D4AF37',
+            color: '#0A2E5D',
+            padding: '12px 18px',
+            borderRadius: '12px',
+            fontWeight: '800',
+            fontSize: '14px',
+            textDecoration: 'none',
+            boxShadow: '0 4px 15px rgba(212, 175, 55, 0.3)',
+            transition: 'transform 0.15s ease'
           }}
         >
-          <RefreshCw size={14} /> Submit another request / review
-        </button>
+          <span>{websiteBtnText}</span>
+          <ArrowRight size={16} />
+        </a>
+
+        <div style={{ marginTop: '12px' }}>
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: '#38BDF8',
+              fontSize: '13px',
+              fontWeight: '600',
+              textDecoration: 'none'
+            }}
+          >
+            <MessageCircle size={15} />
+            <span>{whatsappBtnText}</span>
+          </a>
+        </div>
       </div>
+
+      <button
+        onClick={onReset}
+        style={{
+          background: 'transparent',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          color: '#94A3B8',
+          padding: '10px 18px',
+          borderRadius: '10px',
+          fontSize: '13px',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}
+      >
+        <RotateCcw size={14} />
+        <span>Submit Another Response</span>
+      </button>
     </div>
   );
 }

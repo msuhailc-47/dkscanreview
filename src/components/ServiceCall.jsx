@@ -12,7 +12,7 @@ const SERVICE_OPTIONS = [
   { id: 'manager', label: 'Speak with Store Manager', desc: 'Direct escalation to outlet supervisor', icon: AlertTriangle, color: '#F87171' }
 ];
 
-export default function ServiceCall({ outlet, counter, dept, onSuccess }) {
+export default function ServiceCall({ outlet, counter, dept, pageContent = {}, onSuccess }) {
   const [selectedService, setSelectedService] = useState('assistance');
   const [customerNote, setCustomerNote] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -70,7 +70,6 @@ export default function ServiceCall({ outlet, counter, dept, onSuccess }) {
       onSuccess('service_call');
     } catch (err) {
       console.error('Error creating service call ticket:', err);
-      // Fallback: try sending notification even if firestore write failed
       try {
         await fetch('/api/notify', {
           method: 'POST',
@@ -104,7 +103,7 @@ export default function ServiceCall({ outlet, counter, dept, onSuccess }) {
           <Bell size={26} className="anim-pulse" />
         </div>
         <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#FFFFFF', marginBottom: '4px' }}>
-          Call Staff to Your Counter
+          {pageContent.callStaffHeaderTitle || 'Call Staff to Your Counter'}
         </h3>
         <p style={{ fontSize: '13px', color: '#94A3B8' }}>
           {outlet} • {counter}
@@ -168,7 +167,7 @@ export default function ServiceCall({ outlet, counter, dept, onSuccess }) {
       <div style={{ marginBottom: '16px' }}>
         <input
           type="text"
-          placeholder="Add a note (e.g. Inquiring about solar battery warranty)..."
+          placeholder={pageContent.callStaffNotePlaceholder || 'Add a note (e.g. Inquiring about solar battery warranty)...'}
           value={customerNote}
           onChange={(e) => setCustomerNote(e.target.value)}
           style={{
@@ -235,7 +234,7 @@ export default function ServiceCall({ outlet, counter, dept, onSuccess }) {
         style={{ width: '100%', boxSizing: 'border-box' }}
       >
         <Bell size={18} />
-        <span>{isSubmitting ? 'Sending Alert to Staff...' : 'Call Staff Now'}</span>
+        <span>{isSubmitting ? 'Sending Alert to Staff...' : (pageContent.callStaffBtnText || 'Call Staff Now')}</span>
       </button>
     </form>
   );

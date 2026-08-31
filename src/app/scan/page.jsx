@@ -1,10 +1,20 @@
 'use client';
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Star, Bell, MapPin } from 'lucide-react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import CustomerFeedback from '../../components/CustomerFeedback';
 import ServiceCall from '../../components/ServiceCall';
 import ThankYouScreen from '../../components/ThankYouScreen';
+
+const DEFAULT_CONTENT = {
+  brandTitle: 'DOREK INTERNATIONAL',
+  tagline: 'Official Outlet Customer System',
+  rateTabLabel: 'Rate & Review',
+  serviceTabLabel: 'Call Staff / Help',
+  footerNotice: 'Powered by Dorek Pulse • Official Outlet Customer System'
+};
 
 function ScanPageContent() {
   const searchParams = useSearchParams();
@@ -14,6 +24,18 @@ function ScanPageContent() {
 
   const [activeTab, setActiveTab] = useState('feedback');
   const [completedType, setCompletedType] = useState(null);
+  const [pageContent, setPageContent] = useState(DEFAULT_CONTENT);
+
+  useEffect(() => {
+    if (!db) return;
+    const unsub = onSnapshot(doc(db, 'dorek_cms', 'pulse_page_content'), (snap) => {
+      if (snap.exists()) {
+        setPageContent(prev => ({ ...prev, ...snap.data() }));
+      }
+    }, (err) => console.log('CMS pulse content listener:', err));
+
+    return () => unsub();
+  }, []);
 
   if (completedType) {
     return (
@@ -22,6 +44,7 @@ function ScanPageContent() {
           type={completedType} 
           outlet={outlet}
           counter={counter}
+          pageContent={pageContent}
           onReset={() => setCompletedType(null)} 
         />
       </div>
@@ -33,7 +56,9 @@ function ScanPageContent() {
       <header style={{ textAlign: 'center', marginBottom: '24px' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', background: 'rgba(255, 255, 255, 0.08)', padding: '8px 18px', borderRadius: '50px', border: '1px solid rgba(212, 175, 55, 0.3)', marginBottom: '14px' }}>
           <img src="/logo.png" alt="Dorek Logo" style={{ height: '24px', width: 'auto' }} />
-          <span style={{ fontSize: '15px', fontWeight: '800', letterSpacing: '1px', color: '#D4AF37' }}>DOREK INTERNATIONAL</span>
+          <span style={{ fontSize: '15px', fontWeight: '800', letterSpacing: '1px', color: '#D4AF37' }}>
+            {pageContent.brandTitle || 'DOREK INTERNATIONAL'}
+          </span>
         </div>
         <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#FFFFFF', marginBottom: '4px' }}>
           Welcome to {outlet}
@@ -72,7 +97,7 @@ function ScanPageContent() {
           }}
         >
           <Star size={16} fill={activeTab === 'feedback' ? '#D4AF37' : 'none'} color={activeTab === 'feedback' ? '#D4AF37' : 'currentColor'} />
-          <span>Rate & Review</span>
+          <span>{pageContent.rateTabLabel || 'Rate & Review'}</span>
         </button>
 
         <button
@@ -94,7 +119,7 @@ function ScanPageContent() {
           }}
         >
           <Bell size={16} color={activeTab === 'service' ? '#D4AF37' : 'currentColor'} />
-          <span>Call Staff / Help</span>
+          <span>{pageContent.serviceTabLabel || 'Call Staff / Help'}</span>
         </button>
       </div>
 
@@ -103,6 +128,7 @@ function ScanPageContent() {
           outlet={outlet}
           counter={counter}
           dept={dept}
+          pageContent={pageContent}
           onSuccess={(type) => setCompletedType(type)}
         />
       ) : (
@@ -110,12 +136,13 @@ function ScanPageContent() {
           outlet={outlet}
           counter={counter}
           dept={dept}
+          pageContent={pageContent}
           onSuccess={(type) => setCompletedType(type)}
         />
       )}
 
       <footer style={{ textAlign: 'center', marginTop: '32px', color: '#64748B', fontSize: '12px' }}>
-        Powered by <strong>Dorek Pulse</strong> • Official Outlet Customer System
+        {pageContent.footerNotice || 'Powered by Dorek Pulse • Official Outlet Customer System'}
       </footer>
     </div>
   );

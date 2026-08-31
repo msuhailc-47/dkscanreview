@@ -10,7 +10,7 @@ const TAG_MAP = {
   low: ['⏳ Slow Service', '📉 Out of Stock', '🧾 Billing Delay', '👤 Staff Assistance Needed', '🛠️ Quality Issue', '📢 Needs Management Attention']
 };
 
-export default function CustomerFeedback({ outlet, counter, dept, onSuccess }) {
+export default function CustomerFeedback({ outlet, counter, dept, pageContent = {}, onSuccess }) {
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [selectedTags, setSelectedTags] = useState([]);
@@ -26,6 +26,14 @@ export default function CustomerFeedback({ outlet, counter, dept, onSuccess }) {
     setSelectedTags(prev => 
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
     );
+  };
+
+  const getRatingMessage = (r) => {
+    if (r === 5) return pageContent.star5Text || '🌟 Outstanding Experience!';
+    if (r === 4) return pageContent.star4Text || '😊 Very Good Experience';
+    if (r === 3) return pageContent.star3Text || '😐 Average Experience';
+    if (r === 2) return pageContent.star2Text || '😕 Needs Improvement';
+    return pageContent.star1Text || '⚠️ Poor Experience';
   };
 
   const handleSubmit = async (e) => {
@@ -77,7 +85,6 @@ export default function CustomerFeedback({ outlet, counter, dept, onSuccess }) {
       onSuccess('review');
     } catch (err) {
       console.error('Error submitting feedback:', err);
-      // Even on direct Firestore error, try sending via API
       try {
         await fetch('/api/notify', {
           method: 'POST',
@@ -97,7 +104,7 @@ export default function CustomerFeedback({ outlet, counter, dept, onSuccess }) {
     <form onSubmit={handleSubmit} className="glass-panel animate-fadeIn" style={{ padding: '28px 20px', maxWidth: '480px', margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: '20px' }}>
         <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#FFFFFF', marginBottom: '6px' }}>
-          Rate Your Shopping Experience
+          {pageContent.reviewHeaderTitle || 'Rate Your Shopping Experience'}
         </h3>
         <p style={{ fontSize: '13px', color: '#94A3B8' }}>
           {outlet} • {counter}
@@ -138,17 +145,13 @@ export default function CustomerFeedback({ outlet, counter, dept, onSuccess }) {
       </div>
 
       <div style={{ textAlign: 'center', fontSize: '14px', fontWeight: '700', color: '#D4AF37', marginBottom: '20px' }}>
-        {rating === 5 && '🌟 Outstanding Experience!'}
-        {rating === 4 && '😊 Very Good Experience'}
-        {rating === 3 && '😐 Average Experience'}
-        {rating === 2 && '😕 Needs Improvement'}
-        {rating === 1 && '⚠️ Poor Experience'}
+        {getRatingMessage(rating)}
       </div>
 
       {/* Sentiment Tags */}
       <div style={{ marginBottom: '20px' }}>
         <label style={{ fontSize: '12px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '10px' }}>
-          What stood out to you?
+          {pageContent.tagsLabel || 'What stood out to you?'}
         </label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {activeTags.map((tag) => {
@@ -180,7 +183,7 @@ export default function CustomerFeedback({ outlet, counter, dept, onSuccess }) {
       {/* Comments Box */}
       <div style={{ marginBottom: '18px' }}>
         <textarea
-          placeholder="Share any additional comments or suggestions..."
+          placeholder={pageContent.commentPlaceholder || 'Share any additional comments or suggestions...'}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={3}
@@ -254,7 +257,7 @@ export default function CustomerFeedback({ outlet, counter, dept, onSuccess }) {
         style={{ width: '100%', boxSizing: 'border-box' }}
       >
         <Send size={16} />
-        <span>{isSubmitting ? 'Submitting Review...' : 'Submit Feedback'}</span>
+        <span>{isSubmitting ? 'Submitting Review...' : (pageContent.submitReviewBtnText || 'Submit Feedback')}</span>
       </button>
     </form>
   );

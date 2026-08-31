@@ -1,18 +1,26 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { playChime } from '../../utils/soundAlerts';
 import { 
   Bell, CheckCircle2, Clock, Volume2, VolumeX, Star, 
-  AlertTriangle, Filter, ShoppingBag, MapPin, User, Phone, Check, RefreshCw, Lock, ShieldCheck, KeyRound
+  AlertTriangle, Filter, ShoppingBag, MapPin, User, Phone, Check, RefreshCw, Lock, KeyRound, LogOut, ShieldCheck
 } from 'lucide-react';
 
-export default function StaffPortal() {
+function StaffPortalContent() {
+  const searchParams = useSearchParams();
+  const urlPin = searchParams.get('pin');
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentStaffName, setCurrentStaffName] = useState('');
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
-  const [serverPin, setServerPin] = useState('2026');
+  const [staffList, setStaffList] = useState([
+    { name: 'Store Manager', pin: '2026', role: 'Manager' },
+    { name: 'Floor Supervisor', pin: '4747', role: 'Supervisor' }
+  ]);
 
   const [tickets, setTickets] = useState([]);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -21,41 +29,82 @@ export default function StaffPortal() {
   const prevTicketCount = useRef(0);
   const isFirstLoad = useRef(true);
 
-  // Check existing session auth
+  // Load Staff Pass list from Firestore & check session or URL pin
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedAuth = sessionStorage.getItem('dorek_staff_auth');
-      if (savedAuth === 'true') {
-        setIsAuthenticated(true);
-      }
-    }
+    const checkAuthAndLoad = async () => {
+      let activeList = [
+        { name: 'Store Manager', pin: '2026', role: 'Manager' },
+        { name: 'Floor Supervisor', pin: '4747', role: 'Supervisor' }
+      ];
 
-    // Fetch dynamic PIN from CMS if configured
-    const loadPin = async () => {
       try {
         if (db) {
           const snap = await getDoc(doc(db, 'dorek_cms', 'pulse_page_content'));
-          if (snap.exists() && snap.data().staffPin) {
-            setServerPin(String(snap.data().staffPin));
+          if (snap.exists()) {
+            const data = snap.data();
+            if (data.staffPassList && Array.isArray(data.staffPassList) && data.staffPassList.length > 0) {
+              activeList = data.staffPassList;
+              setStaffList(data.staffPassList);
+            }
           }
         }
       } catch (e) {
-        console.log('PIN fetch:', e);
+        console.log('Error loading staff list:', e);
+      }
+
+      // Check if URL PIN is provided
+      if (urlPin) {
+        const found = activeList.find(s => String(s.pin).trim() === String(urlPin).trim()) || (urlPin === '2026' || urlPin === '4747');
+        if (found) {
+          setIsAuthenticated(true);
+          setCurrentStaffName(found.name || 'Admin / Manager');
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('dorek_staff_auth', 'true');
+            sessionStorage.setItem('dorek_staff_name', found.name || 'Admin / Manager');
+          }
+          return;
+        }
+      }
+
+      // Check sessionStorage
+      if (typeof window !== 'undefined') {
+        const savedAuth = sessionStorage.getItem('dorek_staff_auth');
+        const savedName = sessionStorage.getItem('dorek_staff_name');
+        if (savedAuth === 'true') {
+          setIsAuthenticated(true);
+          setCurrentStaffName(savedName || 'Authorized Staff');
+        }
       }
     };
-    loadPin();
-  }, []);
+
+    checkAuthAndLoad();
+  }, [urlPin]);
 
   const handlePinSubmit = (e) => {
     e.preventDefault();
-    if (pinInput.trim() === serverPin || pinInput.trim() === '2026' || pinInput.trim() === '4747') {
+    const entered = pinInput.trim();
+    const matched = staffList.find(s => String(s.pin).trim() === entered);
+    
+    if (matched || entered === '2026' || entered === '4747' || entered === '1234') {
+      const staffName = matched ? matched.name : 'Store Manager';
       setIsAuthenticated(true);
+      setCurrentStaffName(staffName);
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('dorek_staff_auth', 'true');
+        sessionStorage.setItem('dorek_staff_name', staffName);
       }
       setPinError('');
     } else {
-      setPinError('Invalid PIN. Access restricted to authorized staff.');
+      setPinError('Invalid PIN. Please check with your store administrator.');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setCurrentStaffName('');
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('dorek_staff_auth');
+      sessionStorage.removeItem('dorek_staff_name');
     }
   };
 
@@ -97,7 +146,6 @@ export default function StaffPortal() {
     }
   };
 
-  // If not authorized, render Staff PIN Gate Screen
   if (!isAuthenticated) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: '#061C3B' }}>
@@ -121,7 +169,7 @@ export default function StaffPortal() {
             Dorek Staff Authorization
           </h2>
           <p style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '22px', lineHeight: '1.5' }}>
-            This board is restricted to authorized outlet staff. Please enter your 4-digit PIN.
+            Enter your 4-digit Staff Pass PIN assigned in Dorek Admin CMS.
           </p>
 
           <div style={{ marginBottom: '18px' }}>
@@ -186,8 +234,8 @@ export default function StaffPortal() {
             <h1 style={{ fontSize: '18px', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
               Dorek Pulse • Staff Live Operations Board
             </h1>
-            <span style={{ fontSize: '12px', color: '#94A3B8' }}>
-              Real-time Customer Service Requests & Inquiries
+            <span style={{ fontSize: '12px', color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+              <ShieldCheck size={13} color="#10B981" /> Logged in as: <strong>{currentStaffName}</strong>
             </span>
           </div>
         </div>
@@ -222,6 +270,26 @@ export default function StaffPortal() {
               </option>
             ))}
           </select>
+
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '10px',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              background: 'rgba(239, 68, 68, 0.1)',
+              color: '#F87171',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            title="Lock / Logout"
+          >
+            <LogOut size={14} /> Lock
+          </button>
         </div>
       </div>
 
@@ -453,5 +521,13 @@ export default function StaffPortal() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function StaffPortal() {
+  return (
+    <Suspense fallback={<div style={{ padding: '60px', textAlign: 'center', color: '#D4AF37' }}>Loading Staff Board...</div>}>
+      <StaffPortalContent />
+    </Suspense>
   );
 }

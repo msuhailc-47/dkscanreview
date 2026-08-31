@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { Star, Send, ThumbsUp, MessageSquare, Phone, User, Check, AlertCircle } from 'lucide-react';
-import { collection, addDoc } from 'firebase/firestore';
+import { Star, Send, AlertCircle } from 'lucide-react';
+import { collection, addDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const TAG_MAP = {
@@ -33,28 +33,61 @@ export default function CustomerFeedback({ outlet, counter, dept, onSuccess }) {
     setIsSubmitting(true);
     setError('');
 
-    try {
-      const ticketData = {
-        type: 'review',
-        outlet: outlet || 'Dorek Main Outlet',
-        counter: counter || 'General Counter',
-        dept: dept || 'Retail Sales',
-        rating: rating,
-        tags: selectedTags,
-        message: message.trim(),
-        customerName: customerName.trim() || 'Anonymous Customer',
-        customerPhone: customerPhone.trim() || '',
-        status: rating <= 2 ? 'new' : 'resolved',
-        priority: rating <= 2 ? 'high' : 'normal',
-        createdAt: Date.now(),
-        source: 'QR Scan'
-      };
+    const ticketData = {
+      type: 'review',
+      outlet: outlet || 'Dorek Main Outlet',
+      counter: counter || 'General Counter',
+      dept: dept || 'Retail Sales',
+      rating: rating,
+      tags: selectedTags,
+      message: message.trim(),
+      customerName: customerName.trim() || 'Anonymous Customer',
+      customerPhone: customerPhone.trim() || '',
+      status: rating <= 2 ? 'new' : 'resolved',
+      priority: rating <= 2 ? 'high' : 'normal',
+      createdAt: Date.now(),
+      source: 'QR Scan'
+    };
 
-      await addDoc(collection(db, 'dorek_pulse_tickets'), ticketData);
+    try {
+      if (db) {
+        await addDoc(collection(db, 'dorek_pulse_tickets'), ticketData);
+      }
+
+      // Check notification settings from Firestore and dispatch email
+      try {
+        let notificationEmails = [];
+        if (db) {
+          const settingsSnap = await getDoc(doc(db, 'dorek_cms', 'notification_settings'));
+          if (settingsSnap.exists()) {
+            const data = settingsSnap.data();
+            notificationEmails = data.emails || [];
+          }
+        }
+
+        fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...ticketData, notificationEmails })
+        }).catch(err => console.log('Notification dispatch background error:', err));
+      } catch (notifyErr) {
+        console.log('Notification trigger skipped:', notifyErr);
+      }
+
       onSuccess('review');
     } catch (err) {
       console.error('Error submitting feedback:', err);
-      setError('Unable to submit right now. Please check your internet connection.');
+      // Even on direct Firestore error, try sending via API
+      try {
+        await fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ticketData)
+        });
+        onSuccess('review');
+      } catch (fallbackErr) {
+        setError('Submission error. Please try again or inform staff.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -160,7 +193,8 @@ export default function CustomerFeedback({ outlet, counter, dept, onSuccess }) {
             padding: '12px',
             fontSize: '14px',
             resize: 'none',
-            outline: 'none'
+            outline: 'none',
+            boxSizing: 'border-box'
           }}
         />
       </div>
@@ -181,7 +215,8 @@ export default function CustomerFeedback({ outlet, counter, dept, onSuccess }) {
               color: '#FFFFFF',
               padding: '10px 12px',
               fontSize: '13px',
-              outline: 'none'
+              outline: 'none',
+              boxSizing: 'border-box'
             }}
           />
         </div>
@@ -199,7 +234,8 @@ export default function CustomerFeedback({ outlet, counter, dept, onSuccess }) {
               color: '#FFFFFF',
               padding: '10px 12px',
               fontSize: '13px',
-              outline: 'none'
+              outline: 'none',
+              boxSizing: 'border-box'
             }}
           />
         </div>

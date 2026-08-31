@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Bell, ShoppingBag, Tag, CreditCard, Package, AlertTriangle, Send } from 'lucide-react';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const SERVICE_OPTIONS = [
@@ -27,27 +27,60 @@ export default function ServiceCall({ outlet, counter, dept, onSuccess }) {
 
     const chosen = SERVICE_OPTIONS.find(s => s.id === selectedService);
 
-    try {
-      const ticketData = {
-        type: 'service_call',
-        outlet: outlet || 'Dorek Main Outlet',
-        counter: counter || 'General Counter',
-        dept: dept || 'Retail Sales',
-        requestType: chosen ? chosen.label : 'General Assistance',
-        message: customerNote.trim() || `${chosen?.label} requested at ${counter || 'counter'}.`,
-        customerName: customerName.trim() || 'Store Visitor',
-        customerPhone: customerPhone.trim() || '',
-        status: 'new',
-        priority: selectedService === 'manager' ? 'urgent' : 'high',
-        createdAt: Date.now(),
-        source: 'QR Service Call'
-      };
+    const ticketData = {
+      type: 'service_call',
+      outlet: outlet || 'Dorek Main Outlet',
+      counter: counter || 'General Counter',
+      dept: dept || 'Retail Sales',
+      requestType: chosen ? chosen.label : 'General Assistance',
+      message: customerNote.trim() || `${chosen?.label} requested at ${counter || 'counter'}.`,
+      customerName: customerName.trim() || 'Store Visitor',
+      customerPhone: customerPhone.trim() || '',
+      status: 'new',
+      priority: selectedService === 'manager' ? 'urgent' : 'high',
+      createdAt: Date.now(),
+      source: 'QR Service Call'
+    };
 
-      await addDoc(collection(db, 'dorek_pulse_tickets'), ticketData);
+    try {
+      if (db) {
+        await addDoc(collection(db, 'dorek_pulse_tickets'), ticketData);
+      }
+
+      // Check notification settings from Firestore and dispatch email
+      try {
+        let notificationEmails = [];
+        if (db) {
+          const settingsSnap = await getDoc(doc(db, 'dorek_cms', 'notification_settings'));
+          if (settingsSnap.exists()) {
+            const data = settingsSnap.data();
+            notificationEmails = data.emails || [];
+          }
+        }
+
+        fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...ticketData, notificationEmails })
+        }).catch(err => console.log('Notification dispatch background error:', err));
+      } catch (notifyErr) {
+        console.log('Notification trigger skipped:', notifyErr);
+      }
+
       onSuccess('service_call');
     } catch (err) {
       console.error('Error creating service call ticket:', err);
-      setError('Unable to notify staff right now. Please notify the counter staff directly.');
+      // Fallback: try sending notification even if firestore write failed
+      try {
+        await fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ticketData)
+        });
+        onSuccess('service_call');
+      } catch (fallbackErr) {
+        setError('Unable to notify staff right now. Please notify the counter staff directly.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -146,7 +179,8 @@ export default function ServiceCall({ outlet, counter, dept, onSuccess }) {
             color: '#FFFFFF',
             padding: '10px 12px',
             fontSize: '13px',
-            outline: 'none'
+            outline: 'none',
+            boxSizing: 'border-box'
           }}
         />
       </div>
@@ -165,7 +199,8 @@ export default function ServiceCall({ outlet, counter, dept, onSuccess }) {
             color: '#FFFFFF',
             padding: '10px 12px',
             fontSize: '13px',
-            outline: 'none'
+            outline: 'none',
+            boxSizing: 'border-box'
           }}
         />
         <input
@@ -181,7 +216,8 @@ export default function ServiceCall({ outlet, counter, dept, onSuccess }) {
             color: '#FFFFFF',
             padding: '10px 12px',
             fontSize: '13px',
-            outline: 'none'
+            outline: 'none',
+            boxSizing: 'border-box'
           }}
         />
       </div>

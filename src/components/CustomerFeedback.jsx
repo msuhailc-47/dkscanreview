@@ -4,7 +4,7 @@ import { Star, Send, AlertCircle } from 'lucide-react';
 import { collection, addDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-const TAG_MAP = {
+const DEFAULT_TAGS = {
   high: ['🌟 Excellent Service', '🛍️ Great Product Quality', '⚡ Fast Checkout', '🤝 Helpful Staff', '✨ Clean & Organized', '💎 Best Value'],
   medium: ['👍 Good Service', '📦 Good Variety', '💳 Fair Pricing', '⌛ Normal Wait Time'],
   low: ['⏳ Slow Service', '📉 Out of Stock', '🧾 Billing Delay', '👤 Staff Assistance Needed', '🛠️ Quality Issue', '📢 Needs Management Attention']
@@ -20,7 +20,12 @@ export default function CustomerFeedback({ outlet, counter, dept, pageContent = 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const activeTags = rating >= 4 ? TAG_MAP.high : (rating === 3 ? TAG_MAP.medium : TAG_MAP.low);
+  // Dynamically resolve suggestions from CMS or use defaults
+  const highTags = (pageContent.highTags && pageContent.highTags.length > 0) ? pageContent.highTags : DEFAULT_TAGS.high;
+  const mediumTags = (pageContent.mediumTags && pageContent.mediumTags.length > 0) ? pageContent.mediumTags : DEFAULT_TAGS.medium;
+  const lowTags = (pageContent.lowTags && pageContent.lowTags.length > 0) ? pageContent.lowTags : DEFAULT_TAGS.low;
+
+  const activeTags = rating >= 4 ? highTags : (rating === 3 ? mediumTags : lowTags);
 
   const toggleTag = (tag) => {
     setSelectedTags(prev => 
@@ -149,7 +154,7 @@ export default function CustomerFeedback({ outlet, counter, dept, pageContent = 
         {getRatingMessage(rating)}
       </div>
 
-      {/* Sentiment Tags */}
+      {/* Sentiment Tags / Suggestions */}
       <div style={{ marginBottom: '20px' }}>
         <label style={{ fontSize: '12px', fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '10px' }}>
           {pageContent.tagsLabel || 'What stood out to you?'}

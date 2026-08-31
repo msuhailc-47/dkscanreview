@@ -42,7 +42,7 @@ export async function POST(request) {
       }, { status: 200 });
     }
 
-    // Build recipient list securely
+    // Build unique recipient list
     let recipients = [];
     if (notificationEmails && Array.isArray(notificationEmails) && notificationEmails.length > 0) {
       recipients = notificationEmails.map(e => String(e).trim()).filter(e => e && e.includes('@'));
@@ -53,6 +53,9 @@ export async function POST(request) {
     if (recipients.length === 0) {
       recipients = [defaultAdmin];
     }
+    
+    // Deduplicate recipient emails
+    recipients = Array.from(new Set(recipients));
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -65,6 +68,23 @@ export async function POST(request) {
     const isServiceCall = type === 'service_call';
     const cleanOutlet = escapeHtml(outlet || 'Dorek Retail Outlet');
     const cleanCounter = escapeHtml(counter || 'Customer Desk');
+    
+    // Accurate Indian Standard Time (IST - Asia/Kolkata)
+    const istDate = new Date().toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+
+    const istTime = new Date().toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+
     const subject = isServiceCall 
       ? `🚨 URGENT: Staff Call at ${cleanOutlet} - ${cleanCounter}`
       : `⭐ ${Number(rating) || 5}★ Feedback from ${cleanOutlet} - ${cleanCounter}`;
@@ -77,12 +97,12 @@ export async function POST(request) {
         </div>
 
         <div style="padding: 24px;">
-          <div style="background: ${isServiceCall ? '#fee2e2' : '#f0fdf4'}; border-left: 4px solid ${isServiceCall ? '#ef4444' : '#10b981'}; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px;">
+          <div style="background: ${isServiceCall ? '#fee2e2' : '#f0fdf4'}; border-left: 4px solid ${isServiceCall ? '#ef4444' : '#10b981'}; padding: 14px 16px; border-radius: 6px; margin-bottom: 20px;">
             <h3 style="margin: 0; color: ${isServiceCall ? '#991b1b' : '#065f46'}; font-size: 16px;">
               ${isServiceCall ? '🛎️ Live Service Request / Staff Call' : `⭐ Customer Rating: ${Number(rating) || 5} / 5 Stars`}
             </h3>
-            <p style="margin: 4px 0 0 0; color: #475569; font-size: 13px;">
-              Received at ${new Date().toLocaleTimeString()} on ${new Date().toLocaleDateString()}
+            <p style="margin: 4px 0 0 0; color: #475569; font-size: 13px; font-weight: 600;">
+              🕒 Received at ${istTime} on ${istDate} (IST)
             </p>
           </div>
 
@@ -137,16 +157,36 @@ export async function POST(request) {
       </div>
     `;
 
-    await transporter.sendMail({
-      from: `"Dorek Pulse Alert" <${smtpUser}>`,
-      to: recipients.join(', '),
-      subject: subject,
-      html: htmlContent,
+    // Send direct, concurrent emails to all recipient addresses simultaneously with High Priority headers
+    const sendPromises = recipients.map((toEmail) => {
+      return transporter.sendMail({
+        from: `"Dorek Pulse Alert" <${smtpUser}>`,
+        to: toEmail,
+        subject: subject,
+        html: htmlContent,
+        priority: 'high',
+        headers: {
+          'X-Priority': '1',
+          'X-MSMail-Priority': 'High',
+          'Importance': 'high'
+        }
+      });
     });
 
-    return NextResponse.json({ success: true, notified: recipients });
+    const results = await Promise.allSettled(sendPromises);
+    const successful = recipients.filter((_, idx) => results[idx].status === 'fulfilled');
+    const failed = recipients.filter((_, idx) => results[idx].status === 'rejected');
+
+    console.log(`Alert dispatched: ${successful.length} sent, ${failed.length} failed`);
+
+    return NextResponse.json({ 
+      success: true, 
+      notified: successful, 
+      failed: failed,
+      istTime: `${istTime} ${istDate}`
+    });
   } catch (error) {
-    console.error('Error sending notification email:', error);
+    console.error('Error sending notification emails:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

@@ -29,21 +29,29 @@ export async function POST(request) {
       notificationEmails
     } = body;
 
-    // Use environment variables or reliable Dorek SMTP fallback
-    const smtpUser = process.env.SMTP_USER || body.smtpUser || 'msuhailc47@gmail.com';
-    const smtpPass = process.env.SMTP_PASS || body.smtpPass || 'nelm wiih eyvo tsrh';
+    // Securely retrieve credentials ONLY from Server Environment Variables
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
     const defaultAdmin = process.env.ADMIN_EMAIL || 'info@dorek.in';
 
-    // Build recipient list
+    if (!smtpUser || !smtpPass) {
+      console.warn('SMTP credentials not configured on server. Skipping email dispatch.');
+      return NextResponse.json({ 
+        success: false, 
+        message: 'SMTP credentials not configured in environment variables.' 
+      }, { status: 200 });
+    }
+
+    // Build recipient list securely
     let recipients = [];
     if (notificationEmails && Array.isArray(notificationEmails) && notificationEmails.length > 0) {
-      recipients = notificationEmails.map(e => e.trim()).filter(e => e && e.includes('@'));
+      recipients = notificationEmails.map(e => String(e).trim()).filter(e => e && e.includes('@'));
     } else if (typeof notificationEmails === 'string' && notificationEmails.trim()) {
       recipients = notificationEmails.split(',').map(e => e.trim()).filter(e => e && e.includes('@'));
     }
     
     if (recipients.length === 0) {
-      recipients = [defaultAdmin, 'msuhailc47@gmail.com'];
+      recipients = [defaultAdmin];
     }
 
     const transporter = nodemailer.createTransport({
@@ -55,9 +63,11 @@ export async function POST(request) {
     });
 
     const isServiceCall = type === 'service_call';
+    const cleanOutlet = escapeHtml(outlet || 'Dorek Retail Outlet');
+    const cleanCounter = escapeHtml(counter || 'Customer Desk');
     const subject = isServiceCall 
-      ? `🚨 URGENT: Staff Call at ${escapeHtml(outlet)} - ${escapeHtml(counter)}`
-      : `⭐ ${rating}★ Feedback from ${escapeHtml(outlet)} - ${escapeHtml(counter)}`;
+      ? `🚨 URGENT: Staff Call at ${cleanOutlet} - ${cleanCounter}`
+      : `⭐ ${Number(rating) || 5}★ Feedback from ${cleanOutlet} - ${cleanCounter}`;
 
     const htmlContent = `
       <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
@@ -69,7 +79,7 @@ export async function POST(request) {
         <div style="padding: 24px;">
           <div style="background: ${isServiceCall ? '#fee2e2' : '#f0fdf4'}; border-left: 4px solid ${isServiceCall ? '#ef4444' : '#10b981'}; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px;">
             <h3 style="margin: 0; color: ${isServiceCall ? '#991b1b' : '#065f46'}; font-size: 16px;">
-              ${isServiceCall ? '🛎️ Live Service Request / Staff Call' : `⭐ Customer Rating: ${rating} / 5 Stars`}
+              ${isServiceCall ? '🛎️ Live Service Request / Staff Call' : `⭐ Customer Rating: ${Number(rating) || 5} / 5 Stars`}
             </h3>
             <p style="margin: 4px 0 0 0; color: #475569; font-size: 13px;">
               Received at ${new Date().toLocaleTimeString()} on ${new Date().toLocaleDateString()}
@@ -79,11 +89,11 @@ export async function POST(request) {
           <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 20px;">
             <tr style="border-bottom: 1px solid #f1f5f9;">
               <td style="padding: 10px 0; color: #64748b; font-weight: 600; width: 140px;">Outlet Location:</td>
-              <td style="padding: 10px 0; color: #1e293b; font-weight: 700;">${escapeHtml(outlet || 'Main Store')}</td>
+              <td style="padding: 10px 0; color: #1e293b; font-weight: 700;">${cleanOutlet}</td>
             </tr>
             <tr style="border-bottom: 1px solid #f1f5f9;">
               <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Counter / Desk:</td>
-              <td style="padding: 10px 0; color: #0A2E5D; font-weight: 700;">${escapeHtml(counter || 'General Desk')}</td>
+              <td style="padding: 10px 0; color: #0A2E5D; font-weight: 700;">${cleanCounter}</td>
             </tr>
             ${isServiceCall ? `
             <tr style="border-bottom: 1px solid #f1f5f9;">
@@ -91,7 +101,7 @@ export async function POST(request) {
               <td style="padding: 10px 0; color: #ef4444; font-weight: 700;">${escapeHtml(requestType || 'Assistance')}</td>
             </tr>
             ` : ''}
-            ${tags && tags.length > 0 ? `
+            ${tags && Array.isArray(tags) && tags.length > 0 ? `
             <tr style="border-bottom: 1px solid #f1f5f9;">
               <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Feedback Tags:</td>
               <td style="padding: 10px 0; color: #334155;">${tags.map(t => escapeHtml(t)).join(', ')}</td>
@@ -117,7 +127,7 @@ export async function POST(request) {
           ` : ''}
 
           <div style="text-align: center; margin-top: 24px;">
-            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 10px;">To manage live tickets, visit your Dorek Admin Dashboard or Live Staff Kanban Board.</p>
+            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 10px;">To manage live tickets, visit your Dorek Central Admin Dashboard.</p>
           </div>
         </div>
 

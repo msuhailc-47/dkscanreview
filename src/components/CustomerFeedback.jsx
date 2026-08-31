@@ -190,6 +190,7 @@ export default function CustomerFeedback({ outlet, counter, dept, pageContent = 
       <div style={{ marginBottom: '18px' }}>
         <textarea
           placeholder={pageContent.commentPlaceholder || 'Share any additional comments or suggestions...'}
+          maxLength={500}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={3}
@@ -214,6 +215,7 @@ export default function CustomerFeedback({ outlet, counter, dept, pageContent = 
           <input
             type="text"
             placeholder={pageContent.namePlaceholder || 'Name (Optional)'}
+            maxLength={60}
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
             style={{
@@ -233,6 +235,7 @@ export default function CustomerFeedback({ outlet, counter, dept, pageContent = 
           <input
             type="tel"
             placeholder={pageContent.phonePlaceholder || 'Phone (Optional)'}
+            maxLength={20}
             value={customerPhone}
             onChange={(e) => setCustomerPhone(e.target.value)}
             style={{

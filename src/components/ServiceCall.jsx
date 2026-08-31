@@ -169,6 +169,7 @@ export default function ServiceCall({ outlet, counter, dept, pageContent = {}, o
         <input
           type="text"
           placeholder={pageContent.callStaffNotePlaceholder || 'Add a note (e.g. Inquiring about solar battery warranty)...'}
+          maxLength={300}
           value={customerNote}
           onChange={(e) => setCustomerNote(e.target.value)}
           style={{
@@ -189,6 +190,7 @@ export default function ServiceCall({ outlet, counter, dept, pageContent = {}, o
         <input
           type="text"
           placeholder={pageContent.namePlaceholder || 'Your Name (Optional)'}
+          maxLength={60}
           value={customerName}
           onChange={(e) => setCustomerName(e.target.value)}
           style={{
@@ -206,6 +208,7 @@ export default function ServiceCall({ outlet, counter, dept, pageContent = {}, o
         <input
           type="tel"
           placeholder={pageContent.phonePlaceholder || 'Phone Number (Optional)'}
+          maxLength={20}
           value={customerPhone}
           onChange={(e) => setCustomerPhone(e.target.value)}
           style={{

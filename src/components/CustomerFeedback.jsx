@@ -52,6 +52,7 @@ export default function CustomerFeedback({ outlet, counter, dept, pageContent = 
       customerName: customerName.trim() || 'Anonymous Customer',
       customerPhone: customerPhone.trim() || '',
       status: rating <= 2 ? 'new' : 'resolved',
+      isRead: false,
       priority: rating <= 2 ? 'high' : 'normal',
       createdAt: Date.now(),
       source: 'QR Scan'
@@ -207,7 +208,7 @@ export default function CustomerFeedback({ outlet, counter, dept, pageContent = 
         <div>
           <input
             type="text"
-            placeholder="Name (Optional)"
+            placeholder={pageContent.namePlaceholder || 'Name (Optional)'}
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
             style={{
@@ -226,7 +227,7 @@ export default function CustomerFeedback({ outlet, counter, dept, pageContent = 
         <div>
           <input
             type="tel"
-            placeholder="Phone (Optional)"
+            placeholder={pageContent.phonePlaceholder || 'Phone (Optional)'}
             value={customerPhone}
             onChange={(e) => setCustomerPhone(e.target.value)}
             style={{

@@ -4,14 +4,6 @@ import { Bell, ShoppingBag, Tag, CreditCard, Package, AlertTriangle, Send } from
 import { collection, addDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-const SERVICE_OPTIONS = [
-  { id: 'assistance', label: 'Product Assistance', desc: 'Need help finding an item or product specs', icon: ShoppingBag, color: '#38BDF8' },
-  { id: 'price_check', label: 'Price / Offer Check', desc: 'Verify price, stock, or promotional discounts', icon: Tag, color: '#FBBF24' },
-  { id: 'billing_help', label: 'Billing / Payment Help', desc: 'Assistance with checkout, UPI, or billing speed', icon: CreditCard, color: '#34D399' },
-  { id: 'packaging', label: 'Packaging / Delivery', desc: 'Need gift wrapping, carry bag, or delivery info', icon: Package, color: '#A78BFA' },
-  { id: 'manager', label: 'Speak with Store Manager', desc: 'Direct escalation to outlet supervisor', icon: AlertTriangle, color: '#F87171' }
-];
-
 export default function ServiceCall({ outlet, counter, dept, pageContent = {}, onSuccess }) {
   const [selectedService, setSelectedService] = useState('assistance');
   const [customerNote, setCustomerNote] = useState('');
@@ -19,6 +11,14 @@ export default function ServiceCall({ outlet, counter, dept, pageContent = {}, o
   const [customerPhone, setCustomerPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const SERVICE_OPTIONS = [
+    { id: 'assistance', label: pageContent.serviceOpt1Label || 'Product Assistance', desc: pageContent.serviceOpt1Desc || 'Need help finding an item or product specs', icon: ShoppingBag, color: '#38BDF8' },
+    { id: 'price_check', label: pageContent.serviceOpt2Label || 'Price / Offer Check', desc: pageContent.serviceOpt2Desc || 'Verify price, stock, or promotional discounts', icon: Tag, color: '#FBBF24' },
+    { id: 'billing_help', label: pageContent.serviceOpt3Label || 'Billing / Payment Help', desc: pageContent.serviceOpt3Desc || 'Assistance with checkout, UPI, or billing speed', icon: CreditCard, color: '#34D399' },
+    { id: 'packaging', label: pageContent.serviceOpt4Label || 'Packaging / Delivery', desc: pageContent.serviceOpt4Desc || 'Need gift wrapping, carry bag, or delivery info', icon: Package, color: '#A78BFA' },
+    { id: 'manager', label: pageContent.serviceOpt5Label || 'Speak with Store Manager', desc: pageContent.serviceOpt5Desc || 'Direct escalation to outlet supervisor', icon: AlertTriangle, color: '#F87171' }
+  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,6 +37,7 @@ export default function ServiceCall({ outlet, counter, dept, pageContent = {}, o
       customerName: customerName.trim() || 'Store Visitor',
       customerPhone: customerPhone.trim() || '',
       status: 'new',
+      isRead: false,
       priority: selectedService === 'manager' ? 'urgent' : 'high',
       createdAt: Date.now(),
       source: 'QR Service Call'
@@ -187,7 +188,7 @@ export default function ServiceCall({ outlet, counter, dept, pageContent = {}, o
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
         <input
           type="text"
-          placeholder="Your Name (Optional)"
+          placeholder={pageContent.namePlaceholder || 'Your Name (Optional)'}
           value={customerName}
           onChange={(e) => setCustomerName(e.target.value)}
           style={{
@@ -204,7 +205,7 @@ export default function ServiceCall({ outlet, counter, dept, pageContent = {}, o
         />
         <input
           type="tel"
-          placeholder="Phone Number (Optional)"
+          placeholder={pageContent.phonePlaceholder || 'Phone Number (Optional)'}
           value={customerPhone}
           onChange={(e) => setCustomerPhone(e.target.value)}
           style={{
